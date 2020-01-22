@@ -86,6 +86,24 @@ static esp_sys_thread_t usart_ll_thread_id;
 /* Message queue */
 static esp_sys_mbox_t usart_ll_mbox_id;
 
+extern "C"
+size_t get_free_heap(void) {
+    size_t i;
+
+    /* Get max heap size */
+    for (i = 1; i < 4096; i++) {
+        char* p;
+
+        p = (char*)malloc(1024 * i);
+        if (p) {
+            free(p);
+        } else {
+            break;
+        }
+    }
+    return i - 1;
+}
+
 /**
  * \brief           USART data processing
  */
