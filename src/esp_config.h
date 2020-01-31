@@ -54,6 +54,8 @@
 
 #define ESP_CFG_MDNS                        1
 
+#define ESP_CFG_SNTP                        1
+
 #define ESP_CFG_DBG                         ESP_DBG_ON
 #define ESP_CFG_DBG_OUT(fmt, ...)           do { xprintf(fmt, ## __VA_ARGS__); } while (0)
 extern
