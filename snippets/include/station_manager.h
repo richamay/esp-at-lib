@@ -9,8 +9,8 @@ extern "C" {
 #include "esp/esp.h"
 
 /**
- * \brief           Lookup table for preferred SSIDs with password for auto connect feature
- */
+    \brief           Lookup table for preferred SSIDs with password for auto connect feature
+*/
 typedef struct {
     const char* ssid;
     const char* pass;

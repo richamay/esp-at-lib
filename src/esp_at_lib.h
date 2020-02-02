@@ -1,7 +1,7 @@
 /*
- *  The MIT License (MIT)
- *  Copyright (C) 2019  Seeed Technology Co.,Ltd.
- */
+    The MIT License (MIT)
+    Copyright (C) 2019  Seeed Technology Co.,Ltd.
+*/
 #ifndef _ESP_AT_LIB_H_
 #define _ESP_AT_LIB_H_
 
@@ -12,7 +12,7 @@
 
 extern
 #ifdef __cplusplus
-"C" 
+    "C"
 #endif
 size_t get_free_heap(void);
 
