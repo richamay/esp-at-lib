@@ -4,10 +4,10 @@
 #define ESP_CFG_DBG                 ESP_DBG_ON
 
 /*
-    Enable debug types.
-    Application may use bitwise OR | to use multiple types:
-      ESP_DBG_TYPE_TRACE | ESP_DBG_TYPE_STATE
-*/
+ * Enable debug types. 
+ * Application may use bitwise OR | to use multiple types:
+ *    ESP_DBG_TYPE_TRACE | ESP_DBG_TYPE_STATE
+ */
 #define ESP_CFG_DBG_TYPES_ON        ESP_DBG_TYPE_TRACE
 
 /* Enable debug on custom module */
