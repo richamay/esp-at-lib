@@ -2,9 +2,7 @@ language: generic
 matrix:
   include:
     - env:
-        - BOARD="arduino:avr:uno"
-    - env:
-        - BOARD="Seeeduino:samd:seeed_XIAO_m0"
+        - BOARD="Seeeduino:samd:seeed_grove_ui_wireless"
 # default phases
 before_install:
   - mkdir -p "$HOME/bin"
@@ -12,7 +10,6 @@ before_install:
   - export PATH="$PATH:$HOME/bin"
   - arduino-cli core update-index --additional-urls https://downloads.arduino.cc/packages/package_index.json
   - arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/Seeed-Studio/Seeed_Platform/master/package_seeeduino_boards_index.json
-  - arduino-cli  core install arduino:avr --additional-urls https://downloads.arduino.cc/packages/package_index.json
   - arduino-cli  core install Seeeduino:samd --additional-urls https://raw.githubusercontent.com/Seeed-Studio/Seeed_Platform/master/package_seeeduino_boards_index.json
   - |
     installLibrary() {
@@ -24,41 +21,14 @@ before_install:
       cd "${TRAVIS_BUILD_DIR}"
     }
   - installLibrary Seeed-Studio/esp-at-lib
+  - installLibrary Seeed-Studio/Seeed_Arduino_FreeRTOS
   - buildExampleSketch() { arduino-cli compile  --warnings all --fqbn $BOARD $PWD/examples/$1 --verbose; }
   - buildExampleUtilitySketch() { arduino-cli compile --warnings all --fqbn $BOARD $PWD/examples/utility/$1 --verbose; }
 install:
   - mkdir -p $HOME/Arduino/libraries
 script:
     - |
-      if [ "$BOARD" == "arduino:avr:uno" ]; then
-        buildExampleSketch win32;
-      fi
-    - |
-      if [ "$BOARD" == "arduino:avr:uno" ]; then
-        buildExampleSketch README.md;
-      fi
-    - |
-      if [ "$BOARD" == "arduino:avr:uno" ]; then
-        buildExampleSketch stm32;
-      fi
-    - |
-      if [ "$BOARD" == "arduino:avr:uno" ]; then
-        buildExampleSketch client_rtos;
-      fi
-    - |
-      if [ "$BOARD" == "Seeeduino:samd:seeed_XIAO_m0" ]; then
-        buildExampleSketch win32;
-      fi
-    - |
-      if [ "$BOARD" == "Seeeduino:samd:seeed_XIAO_m0" ]; then
-        buildExampleSketch README.md;
-      fi
-    - |
-      if [ "$BOARD" == "Seeeduino:samd:seeed_XIAO_m0" ]; then
-        buildExampleSketch stm32;
-      fi
-    - |
-      if [ "$BOARD" == "Seeeduino:samd:seeed_XIAO_m0" ]; then
+      if [ "$BOARD" == "Seeeduino:samd:seeed_grove_ui_wireless" ]; then
         buildExampleSketch client_rtos;
       fi
 notifications:
