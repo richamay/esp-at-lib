@@ -256,6 +256,8 @@ esp_ll_init(esp_ll_t* ll) {
  */
 espr_t
 esp_ll_deinit(esp_ll_t* ll) {
+    ll = ll;
+
     if (usart_ll_mbox_id != NULL) {
         esp_sys_mbox_t tmp = usart_ll_mbox_id;
         usart_ll_mbox_id = NULL;
@@ -299,6 +301,8 @@ static espr_t esp_callback_func(esp_evt_t* evt);
 static void
 init_thread(void* arg) {
     int i;
+
+    arg = arg;
 
     i = (int)get_free_heap();
     xprintf("\r\n*** malloc MAX = %dKiB ***\r\n", i);
