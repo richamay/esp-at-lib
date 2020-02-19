@@ -72,7 +72,7 @@
 #endif /* !defined(ESP_USART_RDR_NAME) */
 
 
-auto& at_uart = Serial1;
+auto& at_uart = ARDUINO_SERIAL_TO_ESP32AT;
 
 /* USART memory */
 static uint8_t      usart_mem[ESP_USART_DMA_RX_BUFF_SIZE];
@@ -280,6 +280,11 @@ void _wrap_body(){
     esp_sys_thread_t id_init;
 
     Serial.begin(115200);
+    while (!Serial) {
+        // wait for serial port to connect.
+        // Needed for native USB port only
+        ;
+    }
 
     /* Initialize, create first thread and start kernel */
     // osKernelInitialize();

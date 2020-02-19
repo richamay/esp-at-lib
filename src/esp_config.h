@@ -67,7 +67,10 @@ int xprintf( const char * format, ... );
 #ifndef __cplusplus
 // #define printf                              xprintf
 #endif
-// #define Serial Serial2
+// The log console port
+// #define Serial Serial1
+// esp32 communication port
+#define ARDUINO_SERIAL_TO_ESP32AT Serial2
 
 /* Include default configuration setup */
 #include "esp/esp_config_default.h"
