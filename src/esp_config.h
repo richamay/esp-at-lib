@@ -69,8 +69,18 @@ int xprintf( const char * format, ... );
 #endif
 // The log console port
 // #define Serial Serial1
-// esp32 communication port
+
+// Communication port selection between UART/SPI.
+#define ESP_CFG_USE_SPI                     1
+
+// esp communication UART port
 #define ARDUINO_SERIAL_TO_ESP32AT Serial2
+// esp communication SPI  port
+#define ARDUINO_SPI_TO_ESPAT      SPI
+#define ARDUINO_SPI_PIN_CS        SS
+#define ARDUINO_SPI_PIN_SYNC      0
+
+
 
 /* Include default configuration setup */
 #include "esp/esp_config_default.h"

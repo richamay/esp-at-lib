@@ -5,7 +5,7 @@
 
 /*
  * Copyright (c) 2019 Tilen MAJERLE
- * Copyright (C) 2019  Seeed Technology Co.,Ltd.
+ * Copyright (C) 2019 Seeed Technology Co.,Ltd.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -52,6 +52,7 @@
 #include "esp/esp_mem.h"
 #include "esp/esp_input.h"
 #include "system/esp_ll.h"
+#include "esp_ll_spi.h"
 
 #if !__DOXYGEN__
 
@@ -72,7 +73,12 @@
 #endif /* !defined(ESP_USART_RDR_NAME) */
 
 
+#if ESP_CFG_USE_SPI
+auto& at_uart = ARDUINO_SPI_TO_ESPAT;
+static esp_sys_mutex_t spi_ll_mutex_id;
+#else
 auto& at_uart = ARDUINO_SERIAL_TO_ESP32AT;
+#endif
 
 /* USART memory */
 static uint8_t      usart_mem[ESP_USART_DMA_RX_BUFF_SIZE];
@@ -114,33 +120,19 @@ usart_ll_thread(void* arg) {
     ESP_UNUSED(arg);
 
     while (1) {
-        #if 0
-        void* d;
-        /* Wait for the event message from DMA or USART */
-        esp_sys_mbox_get(usart_ll_mbox_id, &d, 0);
-
-        /* Read data */
-#if defined(ESP_USART_DMA_RX_STREAM)
-        pos = sizeof(usart_mem) - LL_DMA_GetDataLength(ESP_USART_DMA, ESP_USART_DMA_RX_STREAM);
-#else
-        pos = sizeof(usart_mem) - LL_DMA_GetDataLength(ESP_USART_DMA, ESP_USART_DMA_RX_CH);
-#endif /* defined(ESP_USART_DMA_RX_STREAM) */
-        if (pos != old_pos && is_running) {
-            if (pos > old_pos) {
-                esp_input_process(&usart_mem[old_pos], pos - old_pos);
-            } else {
-                esp_input_process(&usart_mem[old_pos], sizeof(usart_mem) - old_pos);
-                if (pos > 0) {
-                    esp_input_process(&usart_mem[0], pos);
-                }
-            }
-            old_pos = pos;
-            if (old_pos == sizeof(usart_mem)) {
-                old_pos = 0;
-            }
-        }
-        #else
         int sz;
+
+        #if ESP_CFG_USE_SPI
+        esp_sys_mutex_lock(&spi_ll_mutex_id);
+        sz = at_spi_read(&usart_mem[0], ESP_USART_DMA_RX_BUFF_SIZE);
+        esp_sys_mutex_unlock(&spi_ll_mutex_id);
+        if (sz <= 0) {
+            vTaskDelay(pdMS_TO_TICKS(1));
+            continue;
+        }
+        esp_input_process(&usart_mem[0], sz);
+
+        #else
 
         sz = at_uart.available();
         if (sz <= 0) {
@@ -165,7 +157,11 @@ usart_ll_thread(void* arg) {
 static void
 configure_uart(uint32_t baudrate) {
     if (!initialized) {
+        #if ESP_CFG_USE_SPI
+        at_spi_begin();
+        #else
         at_uart.begin(baudrate);
+        #endif
 
         old_pos = 0;
         is_running = 1;
@@ -196,7 +192,11 @@ reset_device(uint8_t state) {
     if (state) {                                /* Activate reset line */
         at_uart.end();
     } else {
+        #if ESP_CFG_USE_SPI
+        at_spi_begin();
+        #else
         at_uart.begin(ll->uart.baudrate);
+        #endif
     }
     return 1;
 }
@@ -212,8 +212,18 @@ static size_t
 send_data(const void* data, size_t len) {
     const uint8_t* d = (const uint8_t*)data;
 
+    #if ESP_CFG_USE_SPI
+    if (data) {
+        esp_sys_mutex_lock(&spi_ll_mutex_id);
+        len = at_spi_write(d, len);
+        esp_sys_mutex_unlock(&spi_ll_mutex_id);
+    } else {
+        // no need flush
+    }
+    #else
     at_uart.write(d, len);
     at_uart.flush();
+    #endif
     return len;
 }
 
@@ -244,6 +254,12 @@ esp_ll_init(esp_ll_t* ll) {
 #endif /* defined(ESP_RESET_PIN) */
     }
 
+    #if ESP_CFG_USE_SPI
+    if (spi_ll_mutex_id == NULL) {
+        esp_sys_mutex_create(&spi_ll_mutex_id);
+    }
+    #endif
+
     configure_uart(ll->uart.baudrate);          /* Initialize UART for communication */
     initialized = 1;
     return espOK;
@@ -268,6 +284,17 @@ esp_ll_deinit(esp_ll_t* ll) {
         usart_ll_thread_id = NULL;
         esp_sys_thread_terminate(&tmp);
     }
+
+    #if ESP_CFG_USE_SPI
+    if (spi_ll_mutex_id == NULL) {
+        esp_sys_mutex_create(&spi_ll_mutex_id);
+    }
+    if (spi_ll_mutex_id != NULL) {
+        esp_sys_mutex_delete(&spi_ll_mutex_id);
+        spi_ll_mutex_id = NULL;
+    }
+    #endif
+
     initialized = 0;
     return espOK;
 }
