@@ -68,6 +68,12 @@ connect_to_preferred_access_point(uint8_t unlimited) {
                         if ((eres = esp_sta_join(ap_list[j].ssid, ap_list[j].pass, NULL, NULL, NULL, 1)) == espOK) {
                             esp_ip_t ip;
                             uint8_t is_dhcp;
+
+                            /* Wait for ip assigned by DHCP */
+                            while (!esp_sta_has_ip()) delay(1);
+                            /* Wait for ip got by the library, or else esp_sta_copy_ip may fail */
+                            esp_sta_getip(NULL, NULL, NULL, NULL, NULL, 1);
+
                             esp_sta_copy_ip(&ip, NULL, NULL, &is_dhcp);
 
                             printf("Connected to %s network!\r\n", ap_list[j].ssid);
