@@ -74,11 +74,11 @@ int xprintf( const char * format, ... );
 #define ESP_CFG_USE_SPI                     1
 
 // esp communication UART port
-#define ARDUINO_SERIAL_TO_ESP32AT Serial2
+#define ARDUINO_SERIAL_TO_ESP32AT RTL8720D //Serial2
 // esp communication SPI  port
-#define ARDUINO_SPI_TO_ESPAT      SPI
-#define ARDUINO_SPI_PIN_CS        SS
-#define ARDUINO_SPI_PIN_SYNC      0
+#define ARDUINO_SPI_TO_ESPAT      RTL8720D_SPI
+#define ARDUINO_SPI_PIN_CS        RTL8720D_SS_PIN
+#define ARDUINO_SPI_PIN_SYNC      RTL8720D_GPIO0
 
 
 
