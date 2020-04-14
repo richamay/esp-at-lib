@@ -167,6 +167,10 @@ __ret:
 }
 
 int at_spi_begin(void) {
+  // Reset SPI slave device(RTL8720D)
+  pinMode(RTL8720D_CHIP_PU, OUTPUT);
+  digitalWrite(RTL8720D_CHIP_PU, LOW);
+
   // start the SPI library:
   SPIX.begin();
   // Start SPI transaction at a quarter of the MAX frequency
@@ -175,6 +179,22 @@ int at_spi_begin(void) {
   // initalize the  data ready and chip select pins:
   pinMode(chipSyncPin, INPUT);
   pinMode(chipSelectPin, OUTPUT);
+  digitalWrite(chipSelectPin, HIGH);
+
+  // When RTL8720D startup, set pin UART_LOG_TXD to lowlevel
+  // will force the device enter UARTBURN mode.
+  // Explicit high level will prevent above things.
+  pinMode(PIN_SERIAL2_RX, OUTPUT);
+  digitalWrite(PIN_SERIAL2_RX, HIGH);
+
+  // reset duration
+  delay(20);
+  // Release RTL8720D reset, start bootup.
+  digitalWrite(RTL8720D_CHIP_PU, HIGH);
+  // give the slave time to set up
+  delay(500);
+  pinMode(PIN_SERIAL2_RX, INPUT);
+
   return 0;
 }
 
