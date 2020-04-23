@@ -307,11 +307,13 @@ void _wrap_body(){
     esp_sys_thread_t id_init;
 
     Serial.begin(115200);
+    /*
     while (!Serial) {
         // wait for serial port to connect.
         // Needed for native USB port only
         ;
     }
+    */
 
     /* Initialize, create first thread and start kernel */
     // osKernelInitialize();
@@ -413,6 +415,10 @@ int xprintf(const char *fmt, ...)
     va_start(argptr, fmt);
     rv = vsnprintf(xprt_buf, sizeof xprt_buf - 4, fmt, argptr);
     va_end(argptr);
+
+    if (!Serial) {
+        return rv;
+    }
 
     Serial.write(xprt_buf);
     Serial.flush();
