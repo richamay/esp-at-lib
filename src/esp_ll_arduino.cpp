@@ -427,6 +427,11 @@ int xprintf(const char *fmt, ...)
 
 }// extern "C"
 
+/*
+// arm-none-eabi-gcc/7-2017q4
+// already defined __throw_bad_alloc
+// lib/thumb/v7e-m/fpv4-sp/hard\libstdc++_nano.a(functexcept.o): In function `std::__throw_bad_alloc()':
+
 namespace std{
     void __throw_bad_function_call(){
         xprintf("__throw_bad_function_call:ERROR\n");
@@ -438,5 +443,6 @@ namespace std{
         xprintf("__throw_length_error:ERROR %s\n", s);
     }
 }
+//*/
 
 #endif /* !__DOXYGEN__ */
