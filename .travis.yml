@@ -2,15 +2,15 @@ language: generic
 matrix:
   include:
     - env:
-        - BOARD="Seeeduino:samd:seeed_grove_ui_wireless"
+        - BOARD="Seeeduino:samd:seeed_wio_terminal"
 # default phases
 before_install:
   - mkdir -p "$HOME/bin"
   - curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR="$HOME/bin" sh
   - export PATH="$PATH:$HOME/bin"
   - arduino-cli core update-index --additional-urls https://downloads.arduino.cc/packages/package_index.json
-  - arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/Seeed-Studio/Seeed_Platform/master/package_seeeduino_boards_index.json
-  - arduino-cli  core install Seeeduino:samd --additional-urls https://raw.githubusercontent.com/Seeed-Studio/Seeed_Platform/master/package_seeeduino_boards_index.json
+  - arduino-cli core update-index --additional-urls http://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json
+  - arduino-cli  core install Seeeduino:samd --additional-urls http://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json
   - |
     installLibrary() {
       local -r repositoryFullName="$1"
@@ -28,7 +28,7 @@ install:
   - mkdir -p $HOME/Arduino/libraries
 script:
     - |
-      if [ "$BOARD" == "Seeeduino:samd:seeed_grove_ui_wireless" ]; then
+      if [ "$BOARD" == "Seeeduino:samd:seeed_wio_terminal" ]; then
         buildExampleSketch client_rtos;
       fi
 notifications:
