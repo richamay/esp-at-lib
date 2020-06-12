@@ -278,6 +278,54 @@ esp_get_wifi_mode(esp_mode_t* mode,
     return espi_send_msg_to_producer_mbox(&ESP_MSG_VAR_REF(msg), espi_initiate_cmd, 1000);
 }
 
+
+/**
+ * \brief           Sets WiFi country/channel-specs to the specific value.
+ *
+ *
+ * \param[in]       cnty: country to set, it's platform dependent
+ * \param[in]       evt_fn: Callback function called when command has finished. Set to `NULL` when not used
+ * \param[in]       evt_arg: Custom argument for event callback function
+ * \param[in]       blocking: Status whether command should be blocking or not
+ * \return          \ref espOK on success, member of \ref espr_t enumeration otherwise
+ */
+espr_t
+esp_set_wifi_country(esp_country_t cnty,
+                    const esp_api_cmd_evt_fn evt_fn, void* const evt_arg, const uint32_t blocking) {
+    ESP_MSG_VAR_DEFINE(msg);
+
+    ESP_MSG_VAR_ALLOC(msg, blocking);
+    ESP_MSG_VAR_SET_EVT(msg, evt_fn, evt_arg);
+    ESP_MSG_VAR_REF(msg).cmd_def = ESP_CMD_WIFI_COUNTRY;
+    ESP_MSG_VAR_REF(msg).msg.wifi_country.set = cnty;
+
+    return espi_send_msg_to_producer_mbox(&ESP_MSG_VAR_REF(msg), espi_initiate_cmd, 1000);
+}
+
+/**
+ * \brief           Gets WiFi country/channel-specs setting.
+ *
+ * \param[in]       cnty: point to space of esp_country_t to get. This parameter can be a pointer of \ref esp_mode_t enumeration
+ * \param[in]       evt_fn: Callback function called when command has finished. Set to `NULL` when not used
+ * \param[in]       evt_arg: Custom argument for event callback function
+ * \param[in]       blocking: Status whether command should be blocking or not
+ * \return          \ref espOK on success, member of \ref espr_t enumeration otherwise
+ */
+espr_t
+esp_get_wifi_country(esp_country_t* cnty,
+                    const esp_api_cmd_evt_fn evt_fn, void* const evt_arg, const uint32_t blocking) {
+    ESP_MSG_VAR_DEFINE(msg);
+
+    ESP_ASSERT("cnty != NULL", cnty != NULL);
+
+    ESP_MSG_VAR_ALLOC(msg, blocking);
+    ESP_MSG_VAR_SET_EVT(msg, evt_fn, evt_arg);
+    ESP_MSG_VAR_REF(msg).cmd_def = ESP_CMD_WIFI_COUNTRY_GET;
+    ESP_MSG_VAR_REF(msg).msg.wifi_country.get = cnty;
+
+    return espi_send_msg_to_producer_mbox(&ESP_MSG_VAR_REF(msg), espi_initiate_cmd, 1000);
+}
+
 /**
  * \brief           Sets baudrate of AT port (usually UART)
  * \param[in]       baud: Baudrate in units of bits per second

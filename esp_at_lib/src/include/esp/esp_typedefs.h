@@ -200,6 +200,15 @@ typedef struct {
 
 /**
  * \ingroup         ESP_TYPEDEFS
+ * \brief           Country and channel plan
+ */
+typedef struct {
+    uint16_t country;                           /*!< country setting, platform dependent */
+    uint16_t channel_plan;                      /*!< channel plan, platform dependent */
+} esp_country_t;
+
+/**
+ * \ingroup         ESP_TYPEDEFS
  * \brief           Date and time structure
  */
 typedef struct {

@@ -75,6 +75,9 @@ typedef enum {
     ESP_CMD_WIFI_CWMODE,                        /*!< Set wifi mode */
     ESP_CMD_WIFI_CWMODE_GET,                    /*!< Get wifi mode */
     ESP_CMD_WIFI_CWLAPOPT,                      /*!< Configure what is visible on CWLAP response */
+
+    ESP_CMD_WIFI_COUNTRY,                       /*!< Set wifi country */
+    ESP_CMD_WIFI_COUNTRY_GET,                   /*!< Get wifi country */
 #if ESP_CFG_MODE_STATION || __DOXYGEN__
     ESP_CMD_WIFI_CWJAP,                         /*!< Connect to access point */
     ESP_CMD_WIFI_CWJAP_GET,                     /*!< Info of the connected access point */
@@ -255,6 +258,10 @@ typedef struct esp_msg {
             esp_mode_t mode;                    /*!< Mode of operation */
             esp_mode_t* mode_get;               /*!< Get mode */
         } wifi_mode;                            /*!< When message type \ref ESP_CMD_WIFI_CWMODE is used */
+        struct {
+            esp_country_t set;                  /*!< set wifi country */
+            esp_country_t* get;                 /*!< get wifi country */
+        } wifi_country;
 #if ESP_CFG_MODE_STATION || __DOXYGEN__
         struct {
             const char* name;                   /*!< AP name */

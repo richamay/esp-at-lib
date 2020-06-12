@@ -709,6 +709,10 @@ espi_parse_received(esp_recv_t* rcv) {
             } else if (CMD_IS_CUR(ESP_CMD_WIFI_CWMODE_GET) && !strncmp(rcv->data, "+CWMODE", 7)) {
                 const char* tmp = &rcv->data[8];/* Go to the number position */
                 *esp.msg->msg.wifi_mode.mode_get = (uint8_t)espi_parse_number(&tmp);
+            } else if (CMD_IS_CUR(ESP_CMD_WIFI_COUNTRY_GET) && !strncmp(rcv->data, "+CWCNTY", 7)) {
+                const char* tmp = &rcv->data[8];/* Go to the number position */
+                esp.msg->msg.wifi_country.get->country = (uint8_t)espi_parse_number(&tmp);
+                esp.msg->msg.wifi_country.get->channel_plan = (uint8_t)espi_parse_number(&tmp);
             }
         }
 #if ESP_CFG_MODE_STATION
