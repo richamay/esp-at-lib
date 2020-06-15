@@ -60,8 +60,8 @@ static int spi_transfer16_cs(uint16_t v) {
 int at_wait_io(int level) {
   int i;
   for (i = 0; digitalRead(chipSyncPin) != level; i++) {
-    delay(1);
-    if (i > 500 /*ms*/ * 1) {
+    delayMicroseconds(10);
+    if (i > 500 /*ms*/ * 100) {
       break;
     }
   }
