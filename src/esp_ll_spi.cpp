@@ -37,27 +37,24 @@ enum {
 	SPT_ERR_DEC_SPC = 0x01,
 };
 
-static int spi_transfer_cs(uint8_t v) {
-  // take the chip select low to select the device
-  digitalWrite(chipSelectPin, LOW);
-
-  v = SPIX.transfer(v);
-
-  // take the chip select high to de-select
-  digitalWrite(chipSelectPin, HIGH);
-
-  return v;
+static void spi_cs(bool active)
+{
+    digitalWrite(chipSelectPin, active ? LOW : HIGH);
 }
 
-static int spi_transfer16_cs(uint16_t v) {
+static int spi_transfer(uint8_t v) {
+  return SPIX.transfer(v);
+}
+
+static int spi_transfer16(uint16_t v) {
   uint16_t r;
 
-  r  = spi_transfer_cs(v >> 8) << 8;
-  r |= spi_transfer_cs(v & 0xFF);
+  r  = spi_transfer(v >> 8) << 8;
+  r |= spi_transfer(v & 0xFF);
   return r;
 }
 
-int at_wait_io(int level) {
+static int spi_wait_io(int level) {
   int i;
   for (i = 0; digitalRead(chipSyncPin) != level; i++) {
     delayMicroseconds(10);
@@ -76,14 +73,19 @@ int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait) {
   /* wait slave ready to transfer data */
   delayMicroseconds(_WAIT_SLAVE_READY_US);
 
-  spi_transfer16_cs((SPT_TAG_PRE << 8) | SPT_TAG_WR);
-  spi_transfer16_cs(len);
+  spi_wait_io(SPI_STATE_MOSI);
 
+  spi_cs(true);
+  spi_transfer16((SPT_TAG_PRE << 8) | SPT_TAG_WR);
+  spi_transfer16(len);
+  spi_cs(false);
 
   /* wait slave ready to transfer data */
-  at_wait_io(SPI_STATE_MISO);
+  spi_wait_io(SPI_STATE_MISO);
 
-  v = spi_transfer_cs(SPT_TAG_DMY);
+  spi_cs(true);
+
+  v = spi_transfer(SPT_TAG_DMY);
   if (v != SPT_TAG_ACK) {
     /* device too slow between TAG_PRE and TAG_ACK */
     Serial.printf("No ACK, R%02X\r\n", v);
@@ -91,30 +93,29 @@ int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait) {
     goto __ret;
   }
 
-  v = spi_transfer_cs(SPT_TAG_DMY);
+  v = spi_transfer(SPT_TAG_DMY);
   if (v != SPT_ERR_OK && v != SPT_ERR_DEC_SPC) {
     r = -1000 - v; /* device not ready */
     goto __ret;
   }
 
-  len = spi_transfer16_cs((SPT_TAG_DMY << 8) | SPT_TAG_DMY);
+  len = spi_transfer16((SPT_TAG_DMY << 8) | SPT_TAG_DMY);
 
+  spi_cs(false);
 
-  at_wait_io(SPI_STATE_MOSI);
+  spi_wait_io(SPI_STATE_MOSI);
+
+  spi_cs(true);
   for (i = 0; i < len; i++) {
-    spi_transfer_cs(buf[i]);
+    spi_transfer(buf[i]);
   }
 
-  at_wait_io(SPI_STATE_MOSI);
-
-  /*
-  Serial.print("Trans ");
-  Serial.print(len);
-  Serial.println("B");
-  */
   r = len; /* success transfer len bytes */
 
 __ret:
+  spi_cs(false);
+  spi_wait_io(SPI_STATE_MOSI);
+
   return r;
 }
 
@@ -126,14 +127,19 @@ int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait) {
   /* wait slave ready to transfer data */
   delayMicroseconds(_WAIT_SLAVE_READY_US);
 
-  spi_transfer16_cs((SPT_TAG_PRE << 8) | SPT_TAG_RD);
-  spi_transfer16_cs(len);
+  spi_wait_io(SPI_STATE_MOSI);
 
+  spi_cs(true);
+  spi_transfer16((SPT_TAG_PRE << 8) | SPT_TAG_RD);
+  spi_transfer16(len);
+  spi_cs(false);
 
   /* wait slave ready to transfer data */
-  at_wait_io(SPI_STATE_MISO);
+  spi_wait_io(SPI_STATE_MISO);
 
-  v = spi_transfer_cs(SPT_TAG_DMY);
+  spi_cs(true);
+
+  v = spi_transfer(SPT_TAG_DMY);
   if (v != SPT_TAG_ACK) {
     /* device too slow between TAG_PRE and TAG_ACK */
     Serial.printf("No ACK, R%02X\r\n", v);
@@ -141,24 +147,24 @@ int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait) {
     goto __ret;
   }
 
-  v = spi_transfer_cs(SPT_TAG_DMY);
+  v = spi_transfer(SPT_TAG_DMY);
   if (v != SPT_ERR_OK && v != SPT_ERR_DEC_SPC) {
     r = -1000 - v; /* device not ready */
     goto __ret;
   }
 
-  len = spi_transfer16_cs((SPT_TAG_DMY << 8) | SPT_TAG_DMY);
+  len = spi_transfer16((SPT_TAG_DMY << 8) | SPT_TAG_DMY);
 
   if (len) {
     for (i = 0; i < len; i++) {
-      buf[i] = spi_transfer_cs(SPT_TAG_DMY);
+      buf[i] = spi_transfer(SPT_TAG_DMY);
     }
     r = len; /* success transfer len bytes */
   }
 
-  at_wait_io(SPI_STATE_MOSI);
-
 __ret:
+  spi_cs(false);
+  spi_wait_io(SPI_STATE_MOSI);
 
   return r;
 }
