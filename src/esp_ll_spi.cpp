@@ -132,6 +132,7 @@ int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait) {
 
   /* wait slave ready to transfer data */
   at_wait_io(SPI_STATE_MISO);
+
   v = spi_transfer_cs(SPT_TAG_DMY);
   if (v != SPT_TAG_ACK) {
     /* device too slow between TAG_PRE and TAG_ACK */
@@ -148,18 +149,14 @@ int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait) {
 
   len = spi_transfer16_cs((SPT_TAG_DMY << 8) | SPT_TAG_DMY);
 
-  at_wait_io(SPI_STATE_MOSI);
-
   if (len) {
-    at_wait_io(SPI_STATE_MISO);
-
     for (i = 0; i < len; i++) {
       buf[i] = spi_transfer_cs(SPT_TAG_DMY);
     }
     r = len; /* success transfer len bytes */
-
-    at_wait_io(SPI_STATE_MOSI);
   }
+
+  at_wait_io(SPI_STATE_MOSI);
 
 __ret:
 
