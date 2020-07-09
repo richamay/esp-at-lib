@@ -12,280 +12,188 @@
 #include "esp_config.h"
 #include "esp_ll_spi.h"
 
-// pins used for the connection with the device
-// the other you need are controlled by the SPI library):
-#define SPIX             ARDUINO_SPI_TO_ESPAT
-const int chipSelectPin = ARDUINO_SPI_PIN_CS;
-
-#define SPI_STATE_MISO    0
-#define SPI_STATE_MOSI  (!0)
-const int chipSyncPin  =  ARDUINO_SPI_PIN_SYNC;
-
-// SPI transfer tags, commonly used by target SPI AT device
-enum {
-	SPT_TAG_PRE = 0x55, /* Master initiate a TRANSFER */
-	SPT_TAG_ACK = 0xBE, /* Slave  Acknowledgement */
-	SPT_TAG_WR  = 0x80, /* Master WRITE  to Slave */
-	SPT_TAG_RD  = 0x00, /* Master READ from Slave */
-	SPT_TAG_DMY = 0xFF, /* dummy */
-};
-
-const int _WAIT_SLAVE_READY_US = 0;
-
-enum {
-	SPT_ERR_OK  = 0x00,
-	SPT_ERR_DEC_SPC = 0x01,
-};
-
-static void spi_cs(bool active)
+enum SPI_DIR
 {
-    digitalWrite(chipSelectPin, active ? LOW : HIGH);
-}
+    SPI_STATE_MISO = LOW,
+    SPI_STATE_MOSI = HIGH,
+};
 
-static int spi_transfer(uint8_t v) {
-  return SPIX.transfer(v);
-}
+enum
+{
+	SPT_TAG_PRE	= 0x55, /* Master initiate a TRANSFER */
+	SPT_TAG_WR	= 0x80, /* Master WRITE  to Slave */
+	SPT_TAG_RD	= 0x00, /* Master READ from Slave */
+	SPT_TAG_ACK	= 0xBE, /* Slave  Acknowledgement */
+	SPT_TAG_DMY	= 0xFF, /* dummy */
 
-static int spi_transfer16(uint16_t v) {
-  uint16_t r;
+	SPT_ERR_OK	= 0x00,
+};
 
-  r  = spi_transfer(v >> 8) << 8;
-  r |= spi_transfer(v & 0xFF);
-  return r;
-}
-
-static int spi_wait_io(int level) {
-  int i;
-  for (i = 0; digitalRead(chipSyncPin) != level; i++) {
-    delayMicroseconds(10);
-    if (i > 500 /*ms*/ * 100) {
-      break;
+static inline bool spi_wait_dir(SPI_DIR dir)
+{
+    for (int i = 0; digitalRead(ARDUINO_SPI_PIN_DIR) != dir; ++i)
+    {
+        delayMicroseconds(10);
+        if (i > 500 /*ms*/ * 100) return false;
     }
-  }
-  return 1;
+
+    return true;
 }
 
-int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait) {
-  uint8_t v;
-  int i;
-  int r = 0;
-
-  /* wait slave ready to transfer data */
-  delayMicroseconds(_WAIT_SLAVE_READY_US);
-
-  spi_wait_io(SPI_STATE_MOSI);
-
-  spi_cs(true);
-  spi_transfer16((SPT_TAG_PRE << 8) | SPT_TAG_WR);
-  spi_transfer16(len);
-  spi_cs(false);
-
-  /* wait slave ready to transfer data */
-  spi_wait_io(SPI_STATE_MISO);
-
-  spi_cs(true);
-
-  v = spi_transfer(SPT_TAG_DMY);
-  if (v != SPT_TAG_ACK) {
-    /* device too slow between TAG_PRE and TAG_ACK */
-    Serial.printf("No ACK, R%02X\r\n", v);
-    r = -1;
-    goto __ret;
-  }
-
-  v = spi_transfer(SPT_TAG_DMY);
-  if (v != SPT_ERR_OK && v != SPT_ERR_DEC_SPC) {
-    r = -1000 - v; /* device not ready */
-    goto __ret;
-  }
-
-  len = spi_transfer16((SPT_TAG_DMY << 8) | SPT_TAG_DMY);
-
-  spi_cs(false);
-
-  spi_wait_io(SPI_STATE_MOSI);
-
-  spi_cs(true);
-  for (i = 0; i < len; i++) {
-    spi_transfer(buf[i]);
-  }
-
-  r = len; /* success transfer len bytes */
-
-__ret:
-  spi_cs(false);
-  spi_wait_io(SPI_STATE_MOSI);
-
-  return r;
+static inline bool spi_exist_data()
+{
+    return digitalRead(ARDUINO_SPI_PIN_EXIST_DATA) == HIGH;
 }
 
-int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait) {
-  uint8_t v;
-  int i;
-  int r = 0;
+static inline void spi_cs(bool active)
+{
+    digitalWrite(ARDUINO_SPI_PIN_CS, active ? LOW : HIGH);
+}
 
-  /* wait slave ready to transfer data */
-  delayMicroseconds(_WAIT_SLAVE_READY_US);
+static inline int spi_transfer(uint8_t v)
+{
+    return ARDUINO_SPI_TO_ESPAT.transfer(v);
+}
 
-  spi_wait_io(SPI_STATE_MOSI);
+static inline int spi_transfer8_8(uint8_t v, uint8_t v2)
+{
+    uint16_t r;
 
-  spi_cs(true);
-  spi_transfer16((SPT_TAG_PRE << 8) | SPT_TAG_RD);
-  spi_transfer16(len);
-  spi_cs(false);
+    r  = spi_transfer(v) << 8;
+    r |= spi_transfer(v2);
 
-  /* wait slave ready to transfer data */
-  spi_wait_io(SPI_STATE_MISO);
+    return r;
+}
 
-  spi_cs(true);
+static inline int spi_transfer16(uint16_t v)
+{
+    uint16_t r;
 
-  v = spi_transfer(SPT_TAG_DMY);
-  if (v != SPT_TAG_ACK) {
-    /* device too slow between TAG_PRE and TAG_ACK */
-    Serial.printf("No ACK, R%02X\r\n", v);
-    r = -1;
-    goto __ret;
-  }
+    r  = spi_transfer(v >> 8) << 8;
+    r |= spi_transfer(v & 0xFF);
 
-  v = spi_transfer(SPT_TAG_DMY);
-  if (v != SPT_ERR_OK && v != SPT_ERR_DEC_SPC) {
-    r = -1000 - v; /* device not ready */
-    goto __ret;
-  }
+    return r;
+}
 
-  len = spi_transfer16((SPT_TAG_DMY << 8) | SPT_TAG_DMY);
+int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait)
+{
+    (void)loop_wait;
 
-  if (len) {
-    for (i = 0; i < len; i++) {
-      buf[i] = spi_transfer(SPT_TAG_DMY);
+    uint8_t v;
+    int r = 0;
+
+    spi_wait_dir(SPI_STATE_MOSI);
+
+    spi_cs(true);
+    spi_transfer8_8(SPT_TAG_PRE, SPT_TAG_WR);
+    spi_transfer16(len);
+    spi_cs(false);
+
+    spi_wait_dir(SPI_STATE_MISO);
+
+    spi_cs(true);
+    v = spi_transfer(SPT_TAG_DMY);
+    if (v != SPT_TAG_ACK)
+    {
+        Serial.printf("No ACK, %#04X in WR\r\n", v);    // TODO
+        r = -1;
+        goto __ret;
     }
+    v = spi_transfer(SPT_TAG_DMY);
+    if (v != SPT_ERR_OK)
+    {
+        r = -1000 - v; /* device not ready */
+        goto __ret;
+    }
+    len = spi_transfer8_8(SPT_TAG_DMY, SPT_TAG_DMY);
+    spi_cs(false);
+
+    spi_wait_dir(SPI_STATE_MOSI);
+
+    spi_cs(true);
+    if (len) for (int i = 0; i < len; ++i) spi_transfer(buf[i]);
     r = len; /* success transfer len bytes */
-  }
 
 __ret:
-  spi_cs(false);
-  spi_wait_io(SPI_STATE_MOSI);
+    spi_cs(false);
+    spi_wait_dir(SPI_STATE_MOSI);
 
-  return r;
+    return r;
 }
 
-int at_spi_begin(void) {
-  // Reset SPI slave device(RTL8720D)
-  pinMode(RTL8720D_CHIP_PU, OUTPUT);
-  digitalWrite(RTL8720D_CHIP_PU, LOW);
+int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait)
+{
+    (void)loop_wait;
 
-  // start the SPI library:
-  SPIX.begin();
-  // Start SPI transaction at a quarter of the MAX frequency
-  SPIX.beginTransaction(SPISettings(MAX_SPI / 4, MSBFIRST, SPI_MODE0));
+    if (!spi_exist_data()) return 0;
 
-  // initalize the  data ready and chip select pins:
-  pinMode(chipSyncPin, INPUT);
-  pinMode(chipSelectPin, OUTPUT);
-  digitalWrite(chipSelectPin, HIGH);
+    uint8_t v;
+    int r = 0;
 
-  // When RTL8720D startup, set pin UART_LOG_TXD to lowlevel
-  // will force the device enter UARTBURN mode.
-  // Explicit high level will prevent above things.
-  pinMode(PIN_SERIAL2_RX, OUTPUT);
-  digitalWrite(PIN_SERIAL2_RX, HIGH);
+    spi_wait_dir(SPI_STATE_MOSI);
 
-  // reset duration
-  delay(20);
-  // Release RTL8720D reset, start bootup.
-  digitalWrite(RTL8720D_CHIP_PU, HIGH);
-  // give the slave time to set up
-  delay(500);
-  pinMode(PIN_SERIAL2_RX, INPUT);
+    spi_cs(true);
+    spi_transfer8_8(SPT_TAG_PRE, SPT_TAG_RD);
+    spi_transfer16(len);
+    spi_cs(false);
 
-  return 0;
-}
+    spi_wait_dir(SPI_STATE_MISO);
 
-#if 0
-void setup() {
-  Serial.begin(115200);
-  while(!Serial);
-
-  Serial.println("Begin SPI:");
-  at_spi_begin();
-
-  Serial.println("\nConnecting");
-
-  // give the slave time to set up
-  delay(100);
-  Serial.println("Ready! Enter some AT commands");
-
-  return;
-}
-
-#define U_BUF_SZ 254
-uint8_t u_buf[U_BUF_SZ + 2];
-#define S_BUF_SZ 254
-uint8_t s_buf[S_BUF_SZ + 2];
-int idx = 0;
-
-void loop() {
-  uint8_t c;
-  int r;
-
-  while (Serial.available()) {
-    c = Serial.read();
-
-    /* not empty line or \r\n */
-    if (idx == 0) {
-      if (c == '\r' || c == '\n') continue;
+    spi_cs(true);
+    v = spi_transfer(SPT_TAG_DMY);
+    if (v != SPT_TAG_ACK)
+    {
+        Serial.printf("No ACK, %#04X in RD\r\n", v);    // TODO
+        r = -1;
+        goto __ret;
     }
-
-    /* process all \r, \n, \r\n */
-    if (c == '\n') c = '\r';
-    u_buf[idx] = c;
-    if (idx < U_BUF_SZ)
-      idx++;
-
-    /* maybe leave a char '\n' in Serial object RX buffer */
-    if (c == '\r')
-      break;
-  }
-
-  if (idx && u_buf[idx - 1] == '\r') {
-    u_buf[idx] = '\0';
-
-    r = at_spi_write(u_buf, idx);
-    if (r < 0) {
-      Serial.print("AT_WRITE ERR ");
-      Serial.println(r);
-      delay(1000);
+    v = spi_transfer(SPT_TAG_DMY);
+    if (v != SPT_ERR_OK)
+    {
+        r = -1000 - v; /* device not ready */
+        goto __ret;
     }
-    idx = 0;
-  }
+    len = spi_transfer8_8(SPT_TAG_DMY, SPT_TAG_DMY);
+    if (len) for (int i = 0; i < len; ++i) buf[i] = spi_transfer(SPT_TAG_DMY);
+    r = len; /* success transfer len bytes */
 
-  r = at_spi_read(s_buf, S_BUF_SZ);
-  if (r < 0) {
-    Serial.print("AT_READ ERR ");
-    Serial.println(r);
-    delay(1000);
+__ret:
+    spi_cs(false);
+    spi_wait_dir(SPI_STATE_MOSI);
 
-  } else if (r >= 0) {
-    int i;
-
-    for (i = 0; i < r; i++) {
-      char obuf[0x10];
-      uint8_t b = s_buf[i];
-      int o;
-
-      o = 0;
-      if (b < 0x20 || b == '[' || b >= 0x7F) {
-      	o += sprintf(obuf + o, "[%02X", s_buf[i]);
-      } else {
-        o += sprintf(obuf + o, "%c", s_buf[i]);
-      }
-      Serial.print(obuf);
-      if (b == 0x0A) {
-      	Serial.println();
-      }
-    }
-    // Serial.println("Read OK");
-  }
-  return;
+    return r;
 }
-#endif
+
+int at_spi_begin(void)
+{
+    // Reset SPI slave device(RTL8720D)
+    pinMode(RTL8720D_CHIP_PU, OUTPUT);
+    digitalWrite(RTL8720D_CHIP_PU, LOW);
+
+    // start the SPI library:
+    ARDUINO_SPI_TO_ESPAT.begin();
+    // Start SPI transaction at a quarter of the MAX frequency
+    ARDUINO_SPI_TO_ESPAT.beginTransaction(SPISettings(MAX_SPI / 4, MSBFIRST, SPI_MODE0));
+
+    // initalize the  data ready and chip select pins:
+    pinMode(ARDUINO_SPI_PIN_DIR, INPUT);
+    pinMode(ARDUINO_SPI_PIN_EXIST_DATA, INPUT);
+    pinMode(ARDUINO_SPI_PIN_CS, OUTPUT);
+    digitalWrite(ARDUINO_SPI_PIN_CS, HIGH);
+
+    // When RTL8720D startup, set pin UART_LOG_TXD to lowlevel
+    // will force the device enter UARTBURN mode.
+    // Explicit high level will prevent above things.
+    pinMode(PIN_SERIAL2_RX, OUTPUT);
+    digitalWrite(PIN_SERIAL2_RX, HIGH);
+
+    // reset duration
+    delay(20);
+    // Release RTL8720D reset, start bootup.
+    digitalWrite(RTL8720D_CHIP_PU, HIGH);
+    // give the slave time to set up
+    delay(500);
+    pinMode(PIN_SERIAL2_RX, INPUT);
+
+    return 0;
+}

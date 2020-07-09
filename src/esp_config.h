@@ -73,14 +73,11 @@ int xprintf( const char * format, ... );
 // Communication port selection between UART/SPI.
 #define ESP_CFG_USE_SPI                     1
 
-// esp communication UART port
-#define ARDUINO_SERIAL_TO_ESP32AT RTL8720D //Serial2
 // esp communication SPI  port
-#define ARDUINO_SPI_TO_ESPAT      RTL8720D_SPI
-#define ARDUINO_SPI_PIN_CS        RTL8720D_SS_PIN
-#define ARDUINO_SPI_PIN_SYNC      RTL8720D_GPIO0
-
-
+#define ARDUINO_SPI_PIN_DIR			(RTL8720D_GPIO0)
+#define ARDUINO_SPI_PIN_EXIST_DATA	(IRQ0)
+#define ARDUINO_SPI_TO_ESPAT		(RTL8720D_SPI)
+#define ARDUINO_SPI_PIN_CS			(RTL8720D_SS_PIN)
 
 /* Include default configuration setup */
 #include "esp/esp_config_default.h"
