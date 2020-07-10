@@ -45,8 +45,10 @@
 
 #define ESP_CFG_DNS                         1
 
-#define ESP_CFG_RESET_ON_INIT               0
-#define ESP_CFG_RESTORE_ON_INIT             1
+#define ESP_CFG_RESET_ON_INIT               1
+#define ESP_CFG_RESET_DELAY_DEFAULT         0
+
+#define ESP_CFG_RESTORE_ON_INIT             0
 
 #define ESP_CFG_SMART                       1
 

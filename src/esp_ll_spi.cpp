@@ -12,10 +12,12 @@
 #include "esp_config.h"
 #include "esp_ll_spi.h"
 
+#define RESPONSE_READY  "\r\nready\r\n"
+
 enum SPI_DIR
 {
-    SPI_STATE_MISO = LOW,
-    SPI_STATE_MOSI = HIGH,
+    SPI_DIR_MISO = LOW,
+    SPI_DIR_MOSI = HIGH,
 };
 
 enum
@@ -29,12 +31,14 @@ enum
 	SPT_ERR_OK	= 0x00,
 };
 
-static inline bool spi_wait_dir(SPI_DIR dir)
+static bool spi_wait_dir(SPI_DIR dir, int loop_wait)
 {
+    const auto loop_wait_tick = loop_wait * 100;
+
     for (int i = 0; digitalRead(ARDUINO_SPI_PIN_DIR) != dir; ++i)
     {
         delayMicroseconds(10);
-        if (i > 500 /*ms*/ * 100) return false;
+        if (i > loop_wait_tick) return false;
     }
 
     return true;
@@ -77,19 +81,17 @@ static inline int spi_transfer16(uint16_t v)
 
 int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait)
 {
-    (void)loop_wait;
-
     uint8_t v;
     int r = 0;
 
-    spi_wait_dir(SPI_STATE_MOSI);
+    if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2000;
 
     spi_cs(true);
     spi_transfer8_8(SPT_TAG_PRE, SPT_TAG_WR);
     spi_transfer16(len);
     spi_cs(false);
 
-    spi_wait_dir(SPI_STATE_MISO);
+    if (!spi_wait_dir(SPI_DIR_MISO, loop_wait)) return -2001;
 
     spi_cs(true);
     v = spi_transfer(SPT_TAG_DMY);
@@ -108,7 +110,7 @@ int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait)
     len = spi_transfer8_8(SPT_TAG_DMY, SPT_TAG_DMY);
     spi_cs(false);
 
-    spi_wait_dir(SPI_STATE_MOSI);
+    if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2002;
 
     spi_cs(true);
     if (len) for (int i = 0; i < len; ++i) spi_transfer(buf[i]);
@@ -116,28 +118,26 @@ int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait)
 
 __ret:
     spi_cs(false);
-    spi_wait_dir(SPI_STATE_MOSI);
+    if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2003;
 
     return r;
 }
 
 int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait)
 {
-    (void)loop_wait;
-
     if (!spi_exist_data()) return 0;
 
     uint8_t v;
     int r = 0;
 
-    spi_wait_dir(SPI_STATE_MOSI);
+    if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2000;
 
     spi_cs(true);
     spi_transfer8_8(SPT_TAG_PRE, SPT_TAG_RD);
     spi_transfer16(len);
     spi_cs(false);
 
-    spi_wait_dir(SPI_STATE_MISO);
+    if (!spi_wait_dir(SPI_DIR_MISO, loop_wait)) return -2001;
 
     spi_cs(true);
     v = spi_transfer(SPT_TAG_DMY);
@@ -159,7 +159,7 @@ int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait)
 
 __ret:
     spi_cs(false);
-    spi_wait_dir(SPI_STATE_MOSI);
+    if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2002;
 
     return r;
 }
@@ -189,11 +189,20 @@ int at_spi_begin(void)
 
     // reset duration
     delay(20);
+
     // Release RTL8720D reset, start bootup.
     digitalWrite(RTL8720D_CHIP_PU, HIGH);
+
     // give the slave time to set up
     delay(500);
+
     pinMode(PIN_SERIAL2_RX, INPUT);
+
+    // Receive "\r\nready\r\n"
+    uint8_t buf[strlen(RESPONSE_READY) + 10];
+    int bufLen = at_spi_read(buf, sizeof(buf) - 1);
+    if (bufLen != strlen(RESPONSE_READY)) return 1;
+    if (memcmp(buf, RESPONSE_READY, bufLen) != 0) return 2;
 
     return 0;
 }
