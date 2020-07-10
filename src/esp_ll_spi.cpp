@@ -82,7 +82,6 @@ static inline int spi_transfer16(uint16_t v)
 int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait)
 {
     uint8_t v;
-    int r = 0;
 
     if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2000;
 
@@ -98,14 +97,14 @@ int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait)
     if (v != SPT_TAG_ACK)
     {
         Serial.printf("No ACK, %#04X in WR\r\n", v);    // TODO
-        r = -1;
-        goto __ret;
+        spi_cs(false);
+        return -1;
     }
     v = spi_transfer(SPT_TAG_DMY);
     if (v != SPT_ERR_OK)
     {
-        r = -1000 - v; /* device not ready */
-        goto __ret;
+        spi_cs(false);
+        return -1000 - v; /* device not ready */
     }
     len = spi_transfer8_8(SPT_TAG_DMY, SPT_TAG_DMY);
     spi_cs(false);
@@ -114,13 +113,9 @@ int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait)
 
     spi_cs(true);
     if (len) for (int i = 0; i < len; ++i) spi_transfer(buf[i]);
-    r = len; /* success transfer len bytes */
-
-__ret:
     spi_cs(false);
-    if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2003;
 
-    return r;
+    return len; /* success transfer len bytes */
 }
 
 int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait)
@@ -128,7 +123,6 @@ int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait)
     if (!spi_exist_data()) return 0;
 
     uint8_t v;
-    int r = 0;
 
     if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2000;
 
@@ -144,24 +138,20 @@ int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait)
     if (v != SPT_TAG_ACK)
     {
         Serial.printf("No ACK, %#04X in RD\r\n", v);    // TODO
-        r = -1;
-        goto __ret;
+        spi_cs(false);
+        return -1;
     }
     v = spi_transfer(SPT_TAG_DMY);
     if (v != SPT_ERR_OK)
     {
-        r = -1000 - v; /* device not ready */
-        goto __ret;
+        spi_cs(false);
+        return -1000 - v; /* device not ready */
     }
     len = spi_transfer8_8(SPT_TAG_DMY, SPT_TAG_DMY);
     if (len) for (int i = 0; i < len; ++i) buf[i] = spi_transfer(SPT_TAG_DMY);
-    r = len; /* success transfer len bytes */
-
-__ret:
     spi_cs(false);
-    if (!spi_wait_dir(SPI_DIR_MOSI, loop_wait)) return -2002;
 
-    return r;
+    return len; /* success transfer len bytes */
 }
 
 int at_spi_begin(void)
