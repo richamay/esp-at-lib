@@ -1069,15 +1069,14 @@ espi_process(const void* data, size_t data_len) {
                     ESP_DEBUGF(ESP_CFG_DBG_IPD | ESP_DBG_TYPE_TRACE,
                         "[IPD] Bytes read: %d\r\n", (int)len);
                 } else {                        /* Simply skip the data in buffer */
-                    ESP_DEBUGF(ESP_CFG_DBG_IPD | ESP_DBG_TYPE_TRACE,
-                        "[IPD] Bytes skipped: %d\r\n", (int)len);
+                    ESP_CFG_DBG_OUT("[IPD] Bytes skipped: %d\r\n", (int)len);
                 }
                 d_len -= len;                   /* Decrease effective length */
                 d += len;                       /* Skip remaining length */
                 esp.m.ipd.buff_ptr += len;      /* Forward buffer pointer */
                 esp.m.ipd.rem_len -= len;       /* Decrease remaining length */
             }
-
+            
             /* Did we reach end of buffer or no more data? */
             if (esp.m.ipd.rem_len == 0 || (esp.m.ipd.buff != NULL && esp.m.ipd.buff_ptr == esp.m.ipd.buff->len)) {
                 espr_t res = espOK;
