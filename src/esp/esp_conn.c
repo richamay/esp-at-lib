@@ -66,6 +66,7 @@ conn_timeout_cb(void* arg) {
         esp.evt.evt.conn_poll.conn = conn;      /* Set connection pointer */
         espi_send_conn_cb(conn, NULL);          /* Send connection callback */
 
+        //ESP_CFG_DBG_OUT("conn_timeout_cb:espi_conn_start_timeout(0x%x)\r\n", conn);
         espi_conn_start_timeout(conn);          /* Schedule new timeout */
         ESP_DEBUGF(ESP_CFG_DBG_CONN | ESP_DBG_TYPE_TRACE,
             "[CONN] Poll event: %p\r\n", conn);
