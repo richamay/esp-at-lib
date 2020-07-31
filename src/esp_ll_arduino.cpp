@@ -65,7 +65,7 @@
 #endif /* !defined(ESP_USART_DMA_RX_BUFF_SIZE) */
 
 #if !defined(ESP_MEM_SIZE)
-#define ESP_MEM_SIZE                    0x1000
+#define ESP_MEM_SIZE                    0x2000
 #endif /* !defined(ESP_MEM_SIZE) */
 
 #if !defined(ESP_USART_RDR_NAME)

@@ -892,6 +892,7 @@ espi_parse_received(esp_recv_t* rcv) {
                 esp.evt.evt.conn_active_close.client = conn->status.f.client;   /* Set if it is client or not */
                 esp.evt.evt.conn_active_close.forced = conn->status.f.client;   /* Set if action was forced = if client mode */
                 espi_send_conn_cb(conn, NULL);  /* Send event */
+                //ESP_CFG_DBG_OUT("espi_parse_received:espi_conn_start_timeout(0x%x)\r\n", conn);
                 espi_conn_start_timeout(conn);  /* Start connection timeout timer */
 #if ESP_CFG_CONN_MANUAL_TCP_RECEIVE
                 espi_conn_check_available_rx_data();
@@ -1069,15 +1070,14 @@ espi_process(const void* data, size_t data_len) {
                     ESP_DEBUGF(ESP_CFG_DBG_IPD | ESP_DBG_TYPE_TRACE,
                         "[IPD] Bytes read: %d\r\n", (int)len);
                 } else {                        /* Simply skip the data in buffer */
-                    ESP_DEBUGF(ESP_CFG_DBG_IPD | ESP_DBG_TYPE_TRACE,
-                        "[IPD] Bytes skipped: %d\r\n", (int)len);
+                    ESP_CFG_DBG_OUT("[IPD] Bytes skipped: %d\r\n", (int)len);
                 }
                 d_len -= len;                   /* Decrease effective length */
                 d += len;                       /* Skip remaining length */
                 esp.m.ipd.buff_ptr += len;      /* Forward buffer pointer */
                 esp.m.ipd.rem_len -= len;       /* Decrease remaining length */
             }
-
+            
             /* Did we reach end of buffer or no more data? */
             if (esp.m.ipd.rem_len == 0 || (esp.m.ipd.buff != NULL && esp.m.ipd.buff_ptr == esp.m.ipd.buff->len)) {
                 espr_t res = espOK;
@@ -1134,6 +1134,8 @@ espi_process(const void* data, size_t data_len) {
 
                         if (esp.m.ipd.buff != NULL) {
                             esp_pbuf_set_ip(esp.m.ipd.buff, &esp.m.ipd.ip, esp.m.ipd.port); /* Set IP and port for received data */
+                        } else {
+                            //ESP_CFG_DBG_OUT("[IPD] Buffer allocation failed for %d bytes\r\n", (int)new_len);
                         }
                     } else {
                         esp.m.ipd.buff = NULL;  /* Reset it */
@@ -1246,6 +1248,8 @@ espi_process(const void* data, size_t data_len) {
                                 esp.m.ipd.buff = esp_pbuf_new(len); /* Allocate new packet buffer */
                                 if (esp.m.ipd.buff != NULL) {
                                     esp_pbuf_set_ip(esp.m.ipd.buff, &esp.m.ipd.ip, esp.m.ipd.port); /* Set IP and port for received data */
+                                } else {
+                                    //ESP_CFG_DBG_OUT("[IPD] Buffer allocation failed2 for %d byte(s)\r\n", (int)len);
                                 }
                                 ESP_DEBUGW(ESP_CFG_DBG_IPD | ESP_DBG_TYPE_TRACE | ESP_DBG_LVL_WARNING, esp.m.ipd.buff == NULL,
                                     "[IPD] Buffer allocation failed for %d byte(s)\r\n", (int)len);

@@ -10,7 +10,7 @@
 #include "SPI.h"
 
 int at_spi_begin(void);
-int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait = 50);
-int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait = 50);
+int at_spi_write(const uint8_t* buf, uint16_t len, int loop_wait = 500);
+int at_spi_read(uint8_t* buf, uint16_t len, int loop_wait = 500);
 
 #endif//_ESP_LL_SPI_H_
