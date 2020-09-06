@@ -49,9 +49,21 @@ static inline bool spi_exist_data()
     return digitalRead(ARDUINO_SPI_PIN_EXIST_DATA) == HIGH;
 }
 
+<<<<<<< HEAD
 static inline void spi_cs(bool active)
 {
     digitalWrite(ARDUINO_SPI_PIN_CS, active ? LOW : HIGH);
+=======
+int at_wait_io(int level) {
+  int i;
+  for (i = 0; digitalRead(chipSyncPin) != level; i++) {
+    delay(1);
+    if (i > 500 /*ms*/ * 1) {
+      break;
+    }
+  }
+  return 1;
+>>>>>>> parent of 8c3ecc5... Revert "Fixed an issue with slow response when multitasking." which not stable currently.
 }
 
 static inline int spi_transfer(uint8_t v)
